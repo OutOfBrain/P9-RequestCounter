@@ -1,51 +1,69 @@
 <html>
 <script>
 // TODO: parse header information; use location trick to get url part; use hostname as key for storage
-function requestObject(url, fromCache, statusCode, timeStamp, contentLength, contentType) {
-  return {
-    url:url,
-    fromCache:fromCache,
-    statusCode:statusCode,
-    timeStamp:timeStamp,
-    contentLength:contentLength,
-    contentType:contentType
-  };
-}
+var RequestCounter = {
+  // *** private properties ***
+  num: 0,
+  
+  init: function() {
+    // register eventlisteners
+    chrome.experimental.webRequest.onCompleted.addListener(
+      RequestCounter.onCompletedListener,
+      null,
+      ["responseHeaders"]
+    );
+    chrome.browserAction.onClicked.addListener(
+      RequestCounter.clickListener
+    );
 
-var num = 0;
-
-chrome.experimental.webRequest.onCompleted.addListener(
-  function(detail) {
-    // real requests
-    console.log(detail);
-    num += 1;
-    updateBadge();
+    chrome.experimental.webRequest.onBeforeRequest.addListener(
+      function(detail) {
+        // possible canceled requests
+      }
+    );
   },
-  null,
-  ["responseHeaders"]
-);
-
-chrome.experimental.webRequest.onBeforeRequest.addListener(
-  function(detail) {
-    /*
-    // possible to be canceled - cached
-    console.log(detail);
-    num += 1;
-    updateBadge();
-    */
+  
+  // *** update the badge and prints the total requests of this page ***
+  updateBadge: function() {
+    chrome.browserAction.setBadgeText({"text":this.num.toString()});
+  },
+  
+  // *** the click listener ***
+  clickListener: function(tab) {
+    RequestCounter.num = 0;
+    RequestCounter.updateBadge();
+  },
+  
+  // *** the request listener ***
+  onCompletedListener: function(detail) {
+    // real requests
+    console.log(RequestCounter.detail);
+    RequestCounter.num += 1;
+    RequestCounter.updateBadge();
+  },
+  
+  // *** make an location object out of the location ***
+  getUrlParts: function(url) {
+    var a = document.createElement('a');
+    a.href = url;
+    return a;
+  },
+  
+  // *** helper to create object to store ***
+  getRequestObject: function(url, fromCache, statusCode, timeStamp, contentLength, contentType) {
+    return {
+      url:url,
+      fromCache:fromCache,
+      statusCode:statusCode,
+      timeStamp:timeStamp,
+      contentLength:contentLength,
+      contentType:contentType
+    };
   }
-);
-
-
-chrome.browserAction.onClicked.addListener(
-  function(tab) {
-    num = 0;
-    updateBadge();
-  }
-);
-
-function updateBadge() {
-  chrome.browserAction.setBadgeText({"text":num.toString()});
 }
+
+RequestCounter.init();
+
+
 </script>
 </html>
