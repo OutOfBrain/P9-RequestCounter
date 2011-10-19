@@ -1,0 +1,51 @@
+<html>
+<script>
+// TODO: parse header information; use location trick to get url part; use hostname as key for storage
+function requestObject(url, fromCache, statusCode, timeStamp, contentLength, contentType) {
+  return {
+    url:url,
+    fromCache:fromCache,
+    statusCode:statusCode,
+    timeStamp:timeStamp,
+    contentLength:contentLength,
+    contentType:contentType
+  };
+}
+
+var num = 0;
+
+chrome.experimental.webRequest.onCompleted.addListener(
+  function(detail) {
+    // real requests
+    console.log(detail);
+    num += 1;
+    updateBadge();
+  },
+  null,
+  ["responseHeaders"]
+);
+
+chrome.experimental.webRequest.onBeforeRequest.addListener(
+  function(detail) {
+    /*
+    // possible to be canceled - cached
+    console.log(detail);
+    num += 1;
+    updateBadge();
+    */
+  }
+);
+
+
+chrome.browserAction.onClicked.addListener(
+  function(tab) {
+    num = 0;
+    updateBadge();
+  }
+);
+
+function updateBadge() {
+  chrome.browserAction.setBadgeText({"text":num.toString()});
+}
+</script>
+</html>
