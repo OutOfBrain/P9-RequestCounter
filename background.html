@@ -1,6 +1,6 @@
 <html>
 <script>
-// TODO: parse header information; use location trick to get url part; use hostname as key for storage
+
 var RequestCounter = {
   // *** private properties ***
   num: 0,
@@ -13,40 +13,79 @@ var RequestCounter = {
       ["responseHeaders"]
     );
     chrome.browserAction.onClicked.addListener(
-      RequestCounter.clickListener
+      RequestCounter.onClickListener
     );
-
+    
+    chrome.tabs.onSelectionChanged.addListener(
+      RequestCounter.onTabChangedListener
+    );
+    
     chrome.experimental.webRequest.onBeforeRequest.addListener(
       function(detail) {
         // possible canceled requests
       }
     );
+    
   },
   
   // *** update the badge and prints the total requests of this page ***
   updateBadge: function() {
-    chrome.browserAction.setBadgeText({"text":this.num.toString()});
+    //chrome.browserAction.setBadgeText({text:this.num.toString()});
+  },
+  
+  // *** set the badge text ***
+  setBadgeText: function(text) {
+    chrome.browserAction.setBadgeText({text:''+text});
   },
   
   // *** the click listener ***
-  clickListener: function(tab) {
-    RequestCounter.num = 0;
-    RequestCounter.updateBadge();
+  onClickListener: function(tab) {
   },
   
   // *** the request listener ***
   onCompletedListener: function(detail) {
     // real requests
-    console.log(RequestCounter.detail);
+    console.log(detail);
     RequestCounter.num += 1;
-    RequestCounter.updateBadge();
+    var hostname = RequestCounter.getUrlParts(detail.url).hostname;
+    var oldValue = parseInt(localStorage.getItem(hostname));
+    if (isNaN(oldValue)) {
+      // not yet set
+      localStorage.setItem(hostname, 1);
+    }
+    else {
+      localStorage.setItem(hostname, 1+oldValue);
+    }
+    
+    RequestCounter.updateBadge(hostname);
+  },
+  
+  // *** tab changed listener ***
+  onTabChangedListener: function(tabId) {
+    chrome.tabs.get(tabId, function(tab){
+      // update badgetext and title
+      hostname = RequestCounter.getUrlParts(tab.url).hostname;
+      chrome.browserAction.setTitle({title:hostname});
+      RequestCounter.updateBadge(hostname);
+    });
+  },
+  
+  // *** updates the title and the badge text***
+  updateBadge: function(hostname) {
+    // TODO: overwrites from other tabs
+    RequestCounter.setBadgeText(RequestCounter.getAbsRequests(hostname));
+  },
+  
+  // *** get the absolute number of requests for that page
+  getAbsRequests: function(page) {
+    return localStorage.getItem(page);
   },
   
   // *** make an location object out of the location ***
   getUrlParts: function(url) {
     var a = document.createElement('a');
     a.href = url;
-    return a;
+    return a; // has properties: hash, host, hostname, href, pathname, port, protocol, search
   },
   
   // *** helper to create object to store ***
